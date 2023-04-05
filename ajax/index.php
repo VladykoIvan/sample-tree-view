@@ -152,6 +152,20 @@ class TreeAjaxResponse {
         }
     }
 
+    public function update(int $id, string $name) {
+        try {
+            $stmt = $this->conn->prepare(
+                "update " . self::TABLE_NAME . " set name='" . $name . "' where id=" . $id
+            );
+            $stmt->execute();
+            $this->result = ['result' => 'success', 'message' => ["id" => "$id", "name" => "$name"]];
+        }
+        catch(PDOException $e)
+        {
+            $this->result = ['result' => 'fail', 'message' => $e->getMessage()];
+        }
+    }
+
     /**
      * Response to ajax request
      * @return string[]
@@ -172,11 +186,16 @@ class TreeAjaxResponse {
                         $this->remove((int) $id);
                     }
                     break;
-                case "add" :
+                case "add":
+                case "update":
                     if (isset($_POST['id']) && isset($_POST['name'])) {
                         $name = $_POST['name'];
                         $id = $_POST['id'];
-                        $this->add((int) $id, $name);
+                        if ($action === 'add') {
+                            $this->add((int)$id, $name);
+                        } else {
+                            $this->update((int)$id, $name);
+                        }
                     } else {
                         $this->result = ['result' => 'fail', 'message' => 'not enough parameters'];
                     }
