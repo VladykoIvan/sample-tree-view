@@ -134,14 +134,23 @@
         })
     }
 
+    const openedClass = 'open-ul';
+    const closedClass = 'close-ul';
+    const tree = $("#tree");
     // create root or load tree (both with callback functions)
     $("#create_root").one('click', function(){
         if ($("#create_root").html() === loadBtnText) {
-            $.loadAjax('post', { action: "load" }).done( function(data) { recurseLoad(data.message, "#tree"); });
+            $.loadAjax('post', { action: "load" }).done( function(data) {
+                recurseLoad(data.message, "#tree");
+                $(tree).find('li').has("ul").each(function () {
+                    const node = $(this);
+                    $(node).find('a').eq(0).addClass(openedClass);
+                })
+            })
         } else {
             $.loadAjax('post', {action: "add", id: "0", name: "Root"}).done(
-                function(data) {$(
-                    "#tree").append(`<ul class="tree">` + createNodeHtml(data.message.id, data.message.name) + `</ul>`
+                function(data) {
+                    $(tree).append(`<ul class="tree">` + createNodeHtml(data.message.id, data.message.name) + `</ul>`
                 )}
             );
         }
@@ -150,7 +159,14 @@
     // remove node and all its child (with callback function)
     $('#removeNode .btn-primary').on ('click', function() {
         $.loadAjax('post', { action: "remove", id: $(relatedTarget).parent().attr('data-id')}).done(
-            function() { $(relatedTarget).parent().remove();
+            function() {
+                const liObj = $(relatedTarget).parent().parent().parent();
+                $(relatedTarget).parent().remove();
+                const ulObj = $(liObj).find('ul').eq(0);
+                if(!ulObj.firstChild){
+                    ulObj.remove();
+                    liObj.find('a').eq(0).removeClass(openedClass + " " + closedClass);
+                }
             });
         $('#removeNode').modal('hide');
     })
@@ -160,35 +176,48 @@
         const nodeName = $("#node-name").val();
         // mini-validation
         if (!nodeName) {
-            alert ("Value cannot be empty");
+            alert ('Value cannot be empty');
             return;
         }
-        $.loadAjax('post', { action: "add", id: $(relatedTarget).parent().attr('data-id'), name: nodeName }).done(
+        $.loadAjax('post', { action: 'add', id: $(relatedTarget).parent().attr('data-id'), name: nodeName }).done(
             function(data) {
-                const obj = $(relatedTarget).parent().find("ul").eq(0);
+                const obj = $(relatedTarget).parent().find('ul').eq(0);
                 if (obj.length) {
                     $(obj).append(createNodeHtml(data.message.id, data.message.name))
                 } else {
                     $(relatedTarget).parent().append(`<ul>` +
-                        createNodeHtml(data.message.id, data.message.name) + `</ul>`)
+                        createNodeHtml(data.message.id, data.message.name) + `</ul>`);
+                    $(relatedTarget).parent().find('a').eq(0).addClass(openedClass);
                 }
         });
         $(addNodePopup).modal('hide');
-    });
+    })
 
     // show popup for input node's name
     $(addNodePopup).on('shown.bs.modal', function(event) {
         relatedTarget = $(event.relatedTarget);
-    });
+    })
 
     // send adding form when press 'Enter'
     $(addNodePopup).on('keypress', function (event) {
         let keycode = (event.keyCode ? event.keyCode : event.which);
-        if(keycode === '13'){
+        if(keycode === 13){
             event.preventDefault();
             $('#addNode .btn-primary').click();
         }
-    });
+    })
+
+    // close ul for current li
+    $(tree).on('click', `.${openedClass}`, function (event) {
+        $(event.currentTarget).toggleClass(openedClass + " " + closedClass);
+        $(event.currentTarget).parent().find('ul').eq(0).toggle();
+    })
+
+    // open ul for current li
+    $(tree).on('click', `.${closedClass}`, function (event) {
+        $(event.currentTarget).toggleClass(openedClass + " " + closedClass);
+        $(event.currentTarget).parent().find('ul').eq(0).toggle();
+    })
 
     let timer = null; // variable for setting time to interval
 

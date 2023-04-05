@@ -48,11 +48,32 @@ a {
     width:10px;
     height:0;
     border-top:1px solid;
-    margin-top:-1px;
+    margin-top:1px;
     position:absolute;
     margin-left: 1em;
     top:1em;
-    left:0
+    left:0;
+}
+.tree ul li .open-ul:before, .tree ul li .close-ul:before {
+    content: "";
+    display: block;
+    width: 10px;
+    height: 0;
+    margin-top: -7px;
+    position: absolute;
+    margin-left: 1em;
+    top: 1em;
+    left: 12px;
+    border-width: 8px 0 8px 8px;
+    border-style: solid;
+    border-color: transparent #369;
+}
+
+.tree ul li .open-ul:before {
+    border-width: 6px;
+    margin-left: 0.7em;
+    margin-top: -2px;
+    border-color: transparent #369 #369 transparent;
 }
 
 .tree ul li:last-child:before {
@@ -80,6 +101,10 @@ a {
 .tree li .remove-node {
     margin-left: 0.3em;
     padding: 0.3rem 0.75rem;
+}
+
+.btn {
+    margin-left: 12px;
 }
 
 .btn-secondary {
