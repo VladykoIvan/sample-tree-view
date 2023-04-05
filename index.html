@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Tree View</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css"
+          integrity="sha384-zCbKRCUGaJDkqS1kPbPd7TveP5iyJE0EjAuZQTgFLD2ylzuqKfdKlfG/eSrtxUkn"
+          crossorigin="anonymous">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+            crossorigin="anonymous"
+    ></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-fQybjgWLrvvRgtW6bFlB7jaZrFsaBXjsOMm/tB9LTS58ONXgqbR9W8oWht/amnpF"
+            crossorigin="anonymous"></script>
+</head>
+<body>
+<!--[if lte IE 9]>
+<p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade
+    your browser</a> to improve your experience and security.</p>
+<![endif]-->
+<noscript>
+    <div>You have scripts disabled. The page will not work correctly</div>
+</noscript>
+<!-- Popup for input name and add node -->
+<div class="modal fade" id="addNode" tabindex="-1" role="dialog" aria-labelledby="addNodeLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addNodeLabel">New node</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="false">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="node-name" class="col-form-label">Node:</label>
+                        <input type="text" class="form-control" id="node-name">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Create node</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Popup for remove node (with all children) -->
+<div class="modal fade" id="removeNode" tabindex="-1" role="dialog" aria-labelledby="removeNodeLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="removeNodeLabel">Delete confirmation</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>This is very dangerous, you shouldn't do it. Are you really, really sure?</p>
+            </div>
+            <div class="modal-footer">
+                <span id="countDown">20</span>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+                <button type="button" class="btn btn-primary">Yes, I'm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Page -->
+<div id="container" class="w-100">
+    <div class="ml-3 mt-3">
+        <a id="create_root" class="btn btn-primary">Create Root</a>
+    </div>
+    <div id="tree" class="ml-3 mt-3">
+    </div>
+</div>
+<script>
+    // function with parameters for request to server
+    $.loadAjax = (function(type, data) {
+            return $.ajax({
+                type: type,
+                url: "ajax/index.php",
+                data: data,
+                dataType : "json"
+            });
+    });
+
+    $(document).ready(function () {
+        // check if exist root in database's table
+        $.loadAjax('post', {action: "check"}).done(function (data){
+            if (Array.isArray(data.message) && data.message.length>0) {
+                $("#create_root").html(loadBtnText);
+            }
+        });
+    });
+
+    // base html for one node
+    function createNodeHtml (id, name) {
+        return `<li data-id=${id}><a class="btn">${name}</a>
+                <a data-toggle="modal" data-target="#addNode" class="add-node">+</a>
+                <a class="remove-node" data-toggle="modal" data-target="#removeNode">-</a></li>`
+    }
+
+    let relatedTarget = null; // node, where was loaded pop-up
+    const loadBtnText = 'Load Root'; // text for button, when root exists
+    const addNodePopup = $('#addNode'),
+        removeNodePopup = $('#removeNode');
+
+    // recursive function for loading root and all child nodes
+    function recurseLoad(currentNode, target) {
+        $.each(currentNode, function (key, value) {
+            if (target === "#tree") {
+                $(target).append(`<ul class="tree">` + createNodeHtml(value.id, value.name) + `</ul>`);
+            } else {
+                if (key === 0) {
+                    $(target).append(`<ul>` + createNodeHtml(value.id, value.name) + `</ul>`)
+                } else {
+                    $(target).find("ul").eq(0).append(createNodeHtml(value.id, value.name))
+                }
+            }
+            const obj = $('[data-id=' + value.id + ']').eq(0);
+            if (value.children) {
+                recurseLoad(value.children, obj);
+            }
+        })
+    }
+
+    // create root or load tree (both with callback functions)
+    $("#create_root").one('click', function(){
+        if ($("#create_root").html() === loadBtnText) {
+            $.loadAjax('post', { action: "load" }).done( function(data) { recurseLoad(data.message, "#tree"); });
+        } else {
+            $.loadAjax('post', {action: "add", id: "0", name: "Root"}).done(
+                function(data) {$(
+                    "#tree").append(`<ul class="tree">` + createNodeHtml(data.message.id, data.message.name) + `</ul>`
+                )}
+            );
+        }
+    })
+
+    // remove node and all its child (with callback function)
+    $('#removeNode .btn-primary').on ('click', function() {
+        $.loadAjax('post', { action: "remove", id: $(relatedTarget).parent().attr('data-id')}).done(
+            function() { $(relatedTarget).parent().remove();
+            });
+        $('#removeNode').modal('hide');
+    })
+
+    // add child node to current (with callback function)
+    $('#addNode .btn-primary').on ('click', function() {
+        const nodeName = $("#node-name").val();
+        // mini-validation
+        if (!nodeName) {
+            alert ("Value cannot be empty");
+            return;
+        }
+        $.loadAjax('post', { action: "add", id: $(relatedTarget).parent().attr('data-id'), name: nodeName }).done(
+            function(data) {
+                const obj = $(relatedTarget).parent().find("ul").eq(0);
+                if (obj.length) {
+                    $(obj).append(createNodeHtml(data.message.id, data.message.name))
+                } else {
+                    $(relatedTarget).parent().append(`<ul>` +
+                        createNodeHtml(data.message.id, data.message.name) + `</ul>`)
+                }
+        });
+        $(addNodePopup).modal('hide');
+    });
+
+    // show popup for input node's name
+    $(addNodePopup).on('shown.bs.modal', function(event) {
+        relatedTarget = $(event.relatedTarget);
+    });
+
+    // send adding form when press 'Enter'
+    $(addNodePopup).on('keypress', function (event) {
+        let keycode = (event.keyCode ? event.keyCode : event.which);
+        if(keycode === '13'){
+            event.preventDefault();
+            $('#addNode .btn-primary').click();
+        }
+    });
+
+    let timer = null; // variable for setting time to interval
+
+    // start timer with count down
+    $(removeNodePopup).on('shown.bs.modal', function(event) {
+        relatedTarget = $ (event.relatedTarget)
+        let counter = 20,
+            countDown = $("#countDown");
+
+        timer = setInterval(function () {
+            counter--;
+            if (counter < 0) {
+                $('#removeNode').modal('hide');
+            } else {
+                countDown.text(counter.toString());
+            }
+        }, 1000);
+    });
+
+    // clear time when popup was closed
+    $(removeNodePopup).on('hide.bs.modal', function() {
+        clearInterval(timer);
+    });
+
+    // global error handling for ajax requests
+    $(document).ajaxError(function(e, x, settings, exception) {
+        let message;
+        let statusErrorMap = {
+            '0'   : "Can not connect to server. Please check your network connection",
+            '400' : "Server understood the request, but request content was invalid.",
+            '401' : "Unauthorized access.",
+            '403' : "Forbidden resource can't be accessed.",
+            '500' : "Internal server error.",
+            '503' : "Service unavailable."
+        };
+        if (x.status) {
+            message = statusErrorMap[x.status];
+            if(!message){
+                message = "Unknown Error \n.";
+            }
+        } else if(exception === 'parsererror'){
+            message = "Error.\nParsing JSON Request failed.";
+        } else if(exception === 'timeout'){
+            message = "Request Time out.";
+        } else if(exception === 'abort'){
+            message = "Request was aborted by the server";
+        } else {
+            message = "Unknown Error \n.";
+        }
+        alert(message);
+    });
+</script>
+</body>
+</html>
