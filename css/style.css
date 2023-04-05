@@ -89,18 +89,31 @@ a {
     font-weight:700;
 }
 
-.tree li .add-node, .tree li .remove-node, #countDown {
+.tree li .add-node, .tree li .remove-node, .tree li .edit-node, #countDown {
     background: #369;
     color: #fff;
     text-align: center;
+    -webkit-border-radius: 35%;
+    border-radius: 35%;
+    padding: 0.3rem 0.56rem;
+}
+
+#countDown {
     -webkit-border-radius: 50%;
     border-radius: 50%;
-    padding: 0.3rem 0.6rem;
 }
 
 .tree li .remove-node {
     margin-left: 0.3em;
-    padding: 0.3rem 0.75rem;
+    padding: 0.3rem 0.7rem;
+}
+
+.tree li .add-node {
+    margin-left: 0.3em;
+}
+
+.tree li .edit-node {
+    padding: 0.3rem 0.4rem;
 }
 
 .btn {

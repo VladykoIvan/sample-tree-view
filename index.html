@@ -48,7 +48,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary">Create node</button>
+                <button type="button" class="btn btn-primary">Confirm</button>
             </div>
         </div>
     </div>
@@ -106,6 +106,7 @@
     // base html for one node
     function createNodeHtml (id, name) {
         return `<li data-id=${id}><a class="btn">${name}</a>
+                <a data-toggle="modal" data-target="#addNode" class="edit-node" data-update="${name}">...</a>
                 <a data-toggle="modal" data-target="#addNode" class="add-node">+</a>
                 <a class="remove-node" data-toggle="modal" data-target="#removeNode">-</a></li>`
     }
@@ -171,7 +172,7 @@
         $('#removeNode').modal('hide');
     })
 
-    // add child node to current (with callback function)
+    // add child node to current (with callback function) or rename current node
     $('#addNode .btn-primary').on ('click', function() {
         const nodeName = $("#node-name").val();
         // mini-validation
@@ -179,23 +180,41 @@
             alert ('Value cannot be empty');
             return;
         }
-        $.loadAjax('post', { action: 'add', id: $(relatedTarget).parent().attr('data-id'), name: nodeName }).done(
-            function(data) {
-                const obj = $(relatedTarget).parent().find('ul').eq(0);
-                if (obj.length) {
-                    $(obj).append(createNodeHtml(data.message.id, data.message.name))
-                } else {
-                    $(relatedTarget).parent().append(`<ul>` +
-                        createNodeHtml(data.message.id, data.message.name) + `</ul>`);
-                    $(relatedTarget).parent().find('a').eq(0).addClass(openedClass);
-                }
-        });
+        // update node name
+        if ($(relatedTarget).data('update')) {
+            $.loadAjax('post', {action: 'update', id: $(relatedTarget).parent().attr('data-id'), name: nodeName}).done(
+                function (data) {
+                    $(relatedTarget).parent().find('a').eq(0).text(data.message.name);
+                    $(relatedTarget).attr('data-update', data.message.name);
+                });
+        } else {
+            // create new node
+            $.loadAjax('post', {action: 'add', id: $(relatedTarget).parent().attr('data-id'), name: nodeName}).done(
+                function (data) {
+                    const obj = $(relatedTarget).parent().find('ul').eq(0);
+                    if (obj.length) {
+                        $(obj).append(createNodeHtml(data.message.id, data.message.name))
+                    } else {
+                        $(relatedTarget).parent().append(`<ul>` +
+                            createNodeHtml(data.message.id, data.message.name) + `</ul>`);
+                        $(relatedTarget).parent().find('a').eq(0).addClass(openedClass);
+                    }
+                });
+        }
         $(addNodePopup).modal('hide');
     })
 
     // show popup for input node's name
     $(addNodePopup).on('shown.bs.modal', function(event) {
+        let modal = $(this)
         relatedTarget = $(event.relatedTarget);
+        const name = relatedTarget.attr('data-update');
+        let title = 'New node';
+        if (name) {
+            title = 'Rename node';
+        }
+        modal.find('.modal-title').text(title);
+        modal.find('#node-name').val(name);
     })
 
     // send adding form when press 'Enter'
