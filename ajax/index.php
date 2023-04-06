@@ -152,6 +152,12 @@ class TreeAjaxResponse {
         }
     }
 
+    /**
+     * Change node's name
+     * @param int $id
+     * @param string $name
+     * @return void
+     */
     public function update(int $id, string $name) {
         try {
             $stmt = $this->conn->prepare(
