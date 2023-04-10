@@ -32,7 +32,7 @@ class TreeAjaxResponse {
      */
     public function response(): array
     {
-        if (isset($_POST['action']) && $action = $_POST['action']) {
+        if (isset($_GET['action']) && $action = $_GET['action']) {
             // select the necessary action with the database depending on the parameter $action
             switch ($action) {
                 case 'status':
@@ -42,15 +42,15 @@ class TreeAjaxResponse {
                 case 'load' :
                     return $this->treeResponse->load();
                 case 'remove' :
-                    if (isset($_POST['id']) && $id = $_POST['id']) {
+                    if (isset($_GET['id']) && $id = $_GET['id']) {
                         return $this->treeResponse->remove((int) $id);
                     }
                     break;
                 case 'add':
                 case 'update':
-                    if (isset($_POST['id']) && isset($_POST['name'])) {
-                        $name = $_POST['name'];
-                        $id = $_POST['id'];
+                    if (isset($_GET['id']) && isset($_GET['name'])) {
+                        $name = $_GET['name'];
+                        $id = $_GET['id'];
                         if ($action === 'add') {
                             return $this->treeResponse->add((int)$id, $name);
                         } else {
