@@ -1,175 +1,29 @@
 <?php
 declare(strict_types=1);
 
+use BaseClasses\SessionTreeResponse;
+use BaseClasses\PdoTreeResponse;
+use BaseClasses\TreeResponseInterface;
+
 require_once '../config/pdo.php';
+require_once '../vendor/autoload.php';
 
 /**
  * The class that handles all ajax requests
  */
 class TreeAjaxResponse {
     /**
-     * Table name in database
+     * @var TreeResponseInterface
      */
-    const TABLE_NAME = "TREE";
-    /**
-     * Connection for working with database
-     * @var PDO
-     */
-    protected $conn;
-    /**
-     * Result data for response
-     * @var string[]
-     */
-    protected $result;
+    private $treeResponse;
 
     /**
      * Class constructor. Here a PDO instance is created and the connection to the database is checked
-     * @param string $dsn
-     * @param string $username
-     * @param string $password
-     * @param string $dbname
+     * @param TreeResponseInterface $treeResponse
      */
-    public function __construct(string $dsn, string $username, string $password, string $dbname)
+    public function __construct(TreeResponseInterface $treeResponse)
     {
-        try {
-            $this->conn = new PDO($dsn, $username, $password);
-            // set the PDO error mode to exception
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        }
-        catch (PDOException $e) {
-            die ("Could not connect to the database $dbname :" . $e->getMessage());
-        }
-        $this->result = ['result' => 'fail', 'message' => 'error while accessing the database'];
-    }
-
-    /**
-     * Class destructor
-     */
-    public function __destruct()
-    {
-        $this->conn = null;
-    }
-
-    /**
-     * Check root of tree in database
-     * @return void
-     */
-    public function checkRoot() {
-        try {
-            $stmt = $this->conn->prepare(
-                "select * from " .
-                self::TABLE_NAME .
-                " WHERE parent_id is null LIMIT 1"
-            );
-            $stmt->execute();
-            $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $this->result = ['result' => 'success', 'message' => $res];
-        }
-        catch(PDOException $e)
-        {
-            $this->result = ['result' => 'fail', 'message' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Recursive build tree for all nodes
-     * @param array $items
-     * @param int $parent
-     * @return array
-     */
-    private function buildTree(array $items, int $parent = 0): array
-    {
-        $tree = array();
-        foreach ($items as $item) {
-            if ($item['parent_id'] == $parent) {
-                $children = $this->buildTree($items, (int) $item['id']);
-                if ($children) {
-                    $item['children'] = $children;
-                }
-                $tree[] = $item;
-            }
-        }
-        return $tree;
-    }
-
-    /**
-     * Load tree when we have root
-     * @return void
-     */
-    protected function load () {
-        try {
-            $stmt = $this->conn->prepare("select * from " . self::TABLE_NAME . " order by parent_id");
-            $stmt->execute();
-            $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $res = $this->buildTree($res);
-            $this->result = ['result' => 'success', 'message' => $res];
-        }
-        catch(PDOException $e)
-        {
-            $this->result = ['result' => 'fail', 'message' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Delete node with ID and cascade delete all child nodes (mySql)
-     * @param int $id
-     * @return void
-     */
-    protected function remove(int $id) {
-        try {
-            $query = $this->conn->prepare("delete from " . self::TABLE_NAME . " where id=" . $id);
-            $query->execute();
-            $this->result = ['result' => 'success', 'message' => ["rows" => "{$query->rowCount()}"]];
-        }
-        catch(PDOException $e)
-        {
-            $this->result = ['result' => 'fail', 'message' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Add node with parent_id=$parent_id and name=$name
-     * @param $parent_id
-     * @param string $name
-     * @return void
-     */
-    public function add($parent_id, string $name) {
-        try {
-            if (!$parent_id) {
-                $parent_id = 'null';
-            }
-            $stmt = $this->conn->prepare(
-                "insert into " . self::TABLE_NAME .
-                " (parent_id, name) values (" . $parent_id  . ", '" . $name . "')"
-            );
-            $stmt->execute();
-            $last_id = $this->conn->lastInsertId();
-            $this->result = ['result' => 'success', 'message' => ["id" => "$last_id", "name" => "$name"]];
-        }
-        catch(PDOException $e)
-        {
-            $this->result = ['result' => 'fail', 'message' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Change node's name
-     * @param int $id
-     * @param string $name
-     * @return void
-     */
-    public function update(int $id, string $name) {
-        try {
-            $stmt = $this->conn->prepare(
-                "update " . self::TABLE_NAME . " set name='" . $name . "' where id=" . $id
-            );
-            $stmt->execute();
-            $this->result = ['result' => 'success', 'message' => ["id" => "$id", "name" => "$name"]];
-        }
-        catch(PDOException $e)
-        {
-            $this->result = ['result' => 'fail', 'message' => $e->getMessage()];
-        }
+        $this->treeResponse = $treeResponse;
     }
 
     /**
@@ -181,38 +35,37 @@ class TreeAjaxResponse {
         if (isset($_POST['action']) && $action = $_POST['action']) {
             // select the necessary action with the database depending on the parameter $action
             switch ($action) {
-                case "check" :
-                    $this->checkRoot();
-                    break;
-                case "load" :
-                    $this->load();
-                    break;
-                case "remove" :
+                case 'status':
+                    return $this->treeResponse->getStatus();
+                case 'check' :
+                    return $this->treeResponse->checkRoot();
+                case 'load' :
+                    return $this->treeResponse->load();
+                case 'remove' :
                     if (isset($_POST['id']) && $id = $_POST['id']) {
-                        $this->remove((int) $id);
+                        return $this->treeResponse->remove((int) $id);
                     }
                     break;
-                case "add":
-                case "update":
+                case 'add':
+                case 'update':
                     if (isset($_POST['id']) && isset($_POST['name'])) {
                         $name = $_POST['name'];
                         $id = $_POST['id'];
                         if ($action === 'add') {
-                            $this->add((int)$id, $name);
+                            return $this->treeResponse->add((int)$id, $name);
                         } else {
-                            $this->update((int)$id, $name);
+                            return $this->treeResponse->update((int)$id, $name);
                         }
                     } else {
-                        $this->result = ['result' => 'fail', 'message' => 'not enough parameters'];
+                        return ['result' => 'fail', 'message' => 'not enough parameters'];
                     }
-                    break;
                 default :
-                    $this->result = ['result' => 'fail', 'message' => 'not exist that action'];
+                    return ['result' => 'fail', 'message' => 'not exist that action'];
             }
         } else {
-            $this->result = ['result' => 'fail', 'message' => 'error while accessing the database'];
+            return ['result' => 'fail', 'message' => 'error while accessing the database'];
         }
-        return $this->result;
+        return ['result' => 'fail', 'message' => 'error while accessing the database'];
     }
 }
 /**
@@ -222,6 +75,18 @@ class TreeAjaxResponse {
  * @var $password
  * @var $dbname
  */
-$treeAjaxResponse = new TreeAjaxResponse($dsn, $username, $password, $dbname);
+try {
+    $conn = new PDO($dsn, $username, $password);
+    // set the PDO error mode to exception
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdoTreeResponse = new PdoTreeResponse($conn);
+    $treeAjaxResponse = new TreeAjaxResponse($pdoTreeResponse);
+}
+catch (PDOException $e) {
+    // when database is not available - working with session
+    session_start();
+    $sessionTreeResponse = new SessionTreeResponse();
+    $treeAjaxResponse = new TreeAjaxResponse($sessionTreeResponse);
+}
 echo json_encode($treeAjaxResponse->response());
 header('Content-type:application/json;charset=utf-8');

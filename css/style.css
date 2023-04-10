@@ -98,6 +98,11 @@ a {
     padding: 0.3rem 0.56rem;
 }
 
+#container span {
+    float: right;
+    padding-right: 10px;
+}
+
 #countDown {
     -webkit-border-radius: 50%;
     border-radius: 50%;
