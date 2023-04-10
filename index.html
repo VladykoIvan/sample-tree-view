@@ -22,7 +22,7 @@
 </head>
 <body>
 <!--[if lte IE 9]>
-<p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade
+<p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade
     your browser</a> to improve your experience and security.</p>
 <![endif]-->
 <noscript>
@@ -98,13 +98,13 @@
 
     $(document).ready(function () {
         // check status of connection to database
-        $.loadAjax('post', {action: "status"}).done(function (data){
+        $.loadAjax('get', {action: "status"}).done(function (data){
             const status = $("#status");
             $(status).html(data.message.text);
             $(status).addClass(data.message.color);
         });
         // check if exist root in database's table
-        $.loadAjax('post', {action: "check"}).done(function (data){
+        $.loadAjax('get', {action: "check"}).done(function (data){
             if (Array.isArray(data.message) && data.message.length>0) {
                 $("#create_root").html(loadBtnText);
             }
@@ -149,7 +149,7 @@
     // create root or load tree (both with callback functions)
     $("#create_root").one('click', function(){
         if ($("#create_root").html() === loadBtnText) {
-            $.loadAjax('post', { action: "load" }).done( function(data) {
+            $.loadAjax('get', { action: "load" }).done( function(data) {
                 recurseLoad(data.message, "#tree");
                 $(tree).find('li').has("ul").each(function () {
                     const node = $(this);
@@ -157,7 +157,7 @@
                 })
             })
         } else {
-            $.loadAjax('post', {action: "add", id: "0", name: "Root"}).done(
+            $.loadAjax('get', {action: "add", id: "0", name: "Root"}).done(
                 function(data) {
                     $(tree).append(`<ul class="tree">` + createNodeHtml(data.message.id, data.message.name) + `</ul>`
                 )}
@@ -167,7 +167,7 @@
 
     // remove node and all its child (with callback function)
     $('#removeNode .btn-primary').on ('click', function() {
-        $.loadAjax('post', { action: "remove", id: $(relatedTarget).parent().attr('data-id')}).done(
+        $.loadAjax('get', { action: "remove", id: $(relatedTarget).parent().attr('data-id')}).done(
             function() {
                 const liObj = $(relatedTarget).parent().parent().parent();
                 $(relatedTarget).parent().remove();
@@ -190,14 +190,14 @@
         }
         // update node name
         if ($(relatedTarget).data('update')) {
-            $.loadAjax('post', {action: 'update', id: $(relatedTarget).parent().attr('data-id'), name: nodeName}).done(
+            $.loadAjax('get', {action: 'update', id: $(relatedTarget).parent().attr('data-id'), name: nodeName}).done(
                 function (data) {
                     $(relatedTarget).parent().find('a').eq(0).text(data.message.name);
                     $(relatedTarget).attr('data-update', data.message.name);
                 });
         } else {
             // create new node
-            $.loadAjax('post', {action: 'add', id: $(relatedTarget).parent().attr('data-id'), name: nodeName}).done(
+            $.loadAjax('get', {action: 'add', id: $(relatedTarget).parent().attr('data-id'), name: nodeName}).done(
                 function (data) {
                     const obj = $(relatedTarget).parent().find('ul').eq(0);
                     if (obj.length) {
