@@ -90,3 +90,4 @@ catch (PDOException $e) {
 }
 echo json_encode($treeAjaxResponse->response());
 header('Content-type:application/json;charset=utf-8');
+header('Permissions-Policy:interest-cohort=()');
